@@ -4,8 +4,7 @@
   "icon": "gemini-openai.svg",
   "display": "Gemini & OpenAI API (Rev)",
   "homepage": "https://github.com/lomk-pig/pot-app-translate-plugin-gemini-openai-api-rev",
-  "needs":
-    },
+  "needs":[
     {
       "key": "apiKey",
       "display": "API 密钥 (API Key)",
