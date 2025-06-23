@@ -1,55 +1,107 @@
-# .github/workflows/release.yml
+# 文件路径: .github/workflows/release.yml
 
-name: Release Pot-App Plugin
+name: Build and Release Rust Plugin
 
 on:
-  # 允许手动触发
-  workflow_dispatch:
-    inputs:
-      # 定义一个输入参数，让你可以手动指定版本号
-      version:
-        description: 'The release version tag (e.g., v1.0.0)'
-        required: true # 设为必填项
-
-  # (保留)推送 tag 触发器，这样本地操作也依然有效
+  # 允许你通过推送 v 开头的 tag (如 v1.0.0) 来自动发布
   push:
     tags:
       - 'v*'
+  # 允许你直接在 GitHub 网站的 Actions 页面手动触发发布
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '输入版本标签 (例如: v1.0.0)'
+        required: true
 
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    # 使用“矩阵策略”，一次性为所有目标平台并行构建
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: libplugin.so # Linux 编译产物名
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: libplugin.dylib # macOS (Apple Silicon) 编译产物名
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: plugin.dll # Windows 编译产物名
+
+    runs-on: ${{ matrix.os }} # 根据矩阵中的 os 在不同虚拟机上运行
+    
     steps:
-      - name: Checkout code
+      # 1. 检出你的仓库代码
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get Plugin ID
-        id: get_id
-        run: echo "id=$(jq -r .id info.json)" >> $GITHUB_OUTPUT
+      # 2. 安装 Rust 工具链
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }} # 安装对应的交叉编译目标
 
-      - name: Package Plugin
-        run: zip -r plugin.zip info.json main.js *.svg
+      # 3. 安装 cross-rs，这是进行交叉编译的利器
+      - name: Install cross-rs for cross-compilation
+        uses: taiki-e/install-action@cross
 
-      - name: Rename Package
-        id: rename
+      # 4. 编译你的 Rust 代码，生成动态链接库
+      - name: Build plugin library
+        # 使用 cross 来确保能为不同平台正确编译
+        run: cross build --release --target ${{ matrix.target }}
+
+      # 5. 准备打包所需的文件
+      - name: Prepare package for ${{ matrix.target }}
+        id: package
+        shell: bash
         run: |
-          filename="${{ steps.get_id.outputs.id }}.potext"
-          mv plugin.zip $filename
-          echo "filename=$filename" >> $GITHUB_OUTPUT
+          # 创建一个临时打包目录
+          mkdir -p package_dir
+          
+          # 复制插件信息和图标文件
+          cp info.json package_dir/
+          cp *.svg package_dir/
+          
+          # 从编译产物目录将动态库复制过来，并重命名为 Pot 可识别的名称
+          # Pot 在不同平台下约定的动态库文件名是 plugin.dll, plugin.so, plugin.dylib
+          cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} package_dir/plugin.${{ matrix.artifact_name##*. }}
 
-      # 关键改动：决定 Release 的 tag 和名称
+          # 从 info.json 读取插件 ID
+          PLUGIN_ID=$(jq -r .id info.json)
+          
+          # 设置最终的 .potext 文件名，包含平台信息以作区分
+          FILENAME="${PLUGIN_ID}.${{ matrix.target }}.potext"
+          
+          # 进入打包目录，将所有文件压缩成 .potext 文件
+          cd package_dir
+          zip -r ../${FILENAME} .
+          cd ..
+          
+          # 将最终文件名设置为一个输出变量，供后续步骤使用
+          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+
+      # 6. 设置 Release 的版本号
       - name: Set Release Version
         id: set_version
+        shell: bash
         run: |
           # 如果是手动触发，使用输入的 version；如果是 tag 触发，使用 tag 名称
           VERSION=${{ github.event.inputs.version || github.ref_name }}
           echo "RELEASE_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      # 7. 创建 GitHub Release 并上传所有平台的插件包
+      # 注意：这一步会在所有平台的任务都成功后，将文件上传到同一个 Release 中
+      - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.rename.outputs.filename }}
-          # 使用上一步确定的版本号作为 tag 和 Release 名称
+          # 上传打包好的 .potext 文件
+          files: ${{ steps.package.outputs.filename }}
+          # 使用确定的版本号作为 tag 名称
           tag_name: ${{ steps.set_version.outputs.RELEASE_VERSION }}
+          # 使用版本号作为 Release 的标题
           name: Release ${{ steps.set_version.outputs.RELEASE_VERSION }}
+          # 自动根据 commit 历史生成发布说明
           generate_release_notes: true
