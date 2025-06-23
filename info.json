@@ -1,0 +1,30 @@
+{
+  "id": "plugin.com.syaoranwe.gemini-openai",
+  "plugin_type": "translate",
+  "icon": "gemini-openai.svg",
+  "display": "Gemini & OpenAI API",
+  "homepage": "https://github.com/syaoranwe/pot-app-translate-plugin-gemini-openai-api",
+  "needs":,
+  "language": {
+    "auto": "auto",
+    "zh_cn": "Simplified Chinese (简体中文)",
+    "zh_tw": "Traditional Chinese (繁體中文)",
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "fr": "French",
+    "es": "Spanish",
+    "ru": "Russian",
+    "de": "German",
+    "it": "Italian",
+    "tr": "Turkish",
+    "pt_pt": "Portuguese",
+    "pt_br": "Brazilian Portuguese",
+    "vi": "Vietnamese",
+    "id": "Indonesian",
+    "th": "Thai",
+    "ms": "Malay",
+    "ar": "Arabic",
+    "hi": "Hindi"
+  }
+}
