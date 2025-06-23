@@ -1,14 +1,31 @@
 {
-  "id": "plugin.com.lomk.gemini-openai",
+  "id": "plugin.com.lomk-pig.gemini-openai-rev",
   "plugin_type": "translate",
-  "icon": "gemini.svg",
-  "display": "Gemini & OpenAI API",
+  "icon": "gemini-openai.svg",
+  "display": "Gemini & OpenAI API (Rev)",
   "homepage": "https://github.com/lomk-pig/pot-app-translate-plugin-gemini-openai-api-rev",
-  "needs":,
+  "needs":
+    },
+    {
+      "key": "apiKey",
+      "display": "API 密钥 (API Key)",
+      "type": "input"
+    },
+    {
+      "key": "model",
+      "display": "模型名称 (Model Name)",
+      "type": "input"
+    },
+    {
+      "key": "baseUrl",
+      "display": "自定义 API 地址 (Optional Base URL)",
+      "type": "input"
+    }
+  ],
   "language": {
     "auto": "auto",
-    "zh_cn": "Simplified Chinese (简体中文)",
-    "zh_tw": "Traditional Chinese (繁體中文)",
+    "zh_cn": "Simplified Chinese",
+    "zh_tw": "Traditional Chinese",
     "en": "English",
     "ja": "Japanese",
     "ko": "Korean",
@@ -18,8 +35,8 @@
     "de": "German",
     "it": "Italian",
     "tr": "Turkish",
-    "pt_pt": "Portuguese",
-    "pt_br": "Brazilian Portuguese",
+    "pt_pt": "Portuguese (Portugal)",
+    "pt_br": "Portuguese (Brazil)",
     "vi": "Vietnamese",
     "id": "Indonesian",
     "th": "Thai",
