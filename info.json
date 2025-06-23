@@ -1,9 +1,9 @@
 {
-  "id": "plugin.com.syaoranwe.gemini-openai",
+  "id": "plugin.com.lomk.gemini-openai",
   "plugin_type": "translate",
-  "icon": "gemini-openai.svg",
+  "icon": "gemini.svg",
   "display": "Gemini & OpenAI API",
-  "homepage": "https://github.com/syaoranwe/pot-app-translate-plugin-gemini-openai-api",
+  "homepage": "https://github.com/lomk-pig/pot-app-translate-plugin-gemini-openai-api-rev",
   "needs":,
   "language": {
     "auto": "auto",
