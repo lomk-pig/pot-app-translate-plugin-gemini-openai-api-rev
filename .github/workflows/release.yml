@@ -1,0 +1,44 @@
+#.github/workflows/release.yml
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # 匹配 v1.0.0, v1.2.3 等格式的标签
+
+permissions:
+  contents: write # 必须授予写权限才能创建 Release 和上传产物
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 步骤 1: 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 步骤 2: 从 info.json 中提取插件 ID
+      # 使用 jq 工具解析 info.json 文件，提取 id 字段，并将其设置为一个环境变量。
+      # 这个 ID 将用于命名最终的.potext 文件。
+      - name: Get Plugin ID
+        id: get_id
+        run: echo "PLUGIN_ID=$(jq -r.id info.json)" >> $GITHUB_ENV
+
+      # 步骤 3: 打包插件文件
+      # 将插件的核心文件 (info.json, main.js, icon) 打包成一个.potext 文件。
+      # 文件名直接使用上一步提取的插件 ID。
+      - name: Package plugin files
+        run: zip -r ${{ env.PLUGIN_ID }}.potext info.json main.js gemini-openai.svg
+
+      # 步骤 4: 创建 GitHub Release
+      # 使用 ncipollo/release-action 这个强大且广受好评的 Action 来创建 Release。
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          # artifacts: 指定要上传的构建产物，即我们打包好的.potext 文件。
+          artifacts: "${{ env.PLUGIN_ID }}.potext"
+          # token: 使用 GitHub Actions 自动提供的 GITHUB_TOKEN。
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # generateReleaseNotes: 自动根据从上一个 tag 到当前 tag 之间的 commit 消息生成发布说明。
+          generateReleaseNotes: true
