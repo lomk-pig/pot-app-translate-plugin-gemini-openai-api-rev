@@ -1,7 +1,17 @@
-name: Release Plugin
+# .github/workflows/release.yml
 
-# 当一个以 'v' 开头的标签（例如 v1.0.0）被推送到仓库时，此工作流将被触发
+name: Release Pot-App Plugin
+
 on:
+  # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      # 定义一个输入参数，让你可以手动指定版本号
+      version:
+        description: 'The release version tag (e.g., v1.0.0)'
+        required: true # 设为必填项
+
+  # (保留)推送 tag 触发器，这样本地操作也依然有效
   push:
     tags:
       - 'v*'
@@ -9,41 +19,37 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # 授予工作流写入仓库内容的权限，用于创建 Release
-
     steps:
-      # 步骤 1: 检出您的仓库代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 步骤 2: 安装 jq 工具，用于从 info.json 中读取插件 ID
-      - name: Install jq
-        run: sudo apt-get install -y jq
+      - name: Get Plugin ID
+        id: get_id
+        run: echo "id=$(jq -r .id info.json)" >> $GITHUB_OUTPUT
 
-      # 步骤 3: 从 info.json 文件中提取插件 ID 和图标文件名
-      - name: Extract plugin info
-        id: plugin_info
+      - name: Package Plugin
+        run: zip -r plugin.zip info.json main.js *.svg
+
+      - name: Rename Package
+        id: rename
         run: |
-          # 读取 ID 并设置为输出变量
-          PLUGIN_ID=$(jq -r '.id' info.json)
-          echo "plugin_id=$PLUGIN_ID" >> $GITHUB_OUTPUT
-          # 读取图标文件名并设置为输出变量
-          ICON_FILE=$(jq -r '.icon' info.json)
-          echo "icon_file=$ICON_FILE" >> $GITHUB_OUTPUT
+          filename="${{ steps.get_id.outputs.id }}.potext"
+          mv plugin.zip $filename
+          echo "filename=$filename" >> $GITHUB_OUTPUT
 
-      # 步骤 4: 将插件文件打包成 ZIP 压缩包
-      - name: Package plugin files
-        run: zip plugin.zip main.js info.json ${{ steps.plugin_info.outputs.icon_file }}
+      # 关键改动：决定 Release 的 tag 和名称
+      - name: Set Release Version
+        id: set_version
+        run: |
+          # 如果是手动触发，使用输入的 version；如果是 tag 触发，使用 tag 名称
+          VERSION=${{ github.event.inputs.version || github.ref_name }}
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      # 步骤 5: 将 ZIP 文件重命名为.potext 格式
-      - name: Rename to.potext
-        run: mv plugin.zip ${{ steps.plugin_info.outputs.plugin_id }}.potext
-
-      # 步骤 6: 创建 GitHub Release 并上传.potext 文件作为附件
-      - name: Create Release and Upload Asset
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          # 将.potext 文件作为附件上传
-          files: ${{ steps.plugin_info.outputs.plugin_id }}.potext
-          # Release 的标题和标签将自动使用 Git 标签的名称
+          files: ${{ steps.rename.outputs.filename }}
+          # 使用上一步确定的版本号作为 tag 和 Release 名称
+          tag_name: ${{ steps.set_version.outputs.RELEASE_VERSION }}
+          name: Release ${{ steps.set_version.outputs.RELEASE_VERSION }}
+          generate_release_notes: true
